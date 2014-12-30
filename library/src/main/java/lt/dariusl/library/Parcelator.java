@@ -1,9 +1,6 @@
 package lt.dariusl.library;
 
-import android.os.IBinder;
-import android.os.IInterface;
 import android.os.Parcel;
-import android.text.TextUtils;
 
 /**
  * Created by Darius on 2014.12.29.
@@ -12,14 +9,10 @@ public class Parcelator {
     public static void writeToParcel(Parcel parcel, Object value, Class<?> cls){
         int flags = Flags.makeFlags(cls, value);
 
-        if(Flags.isPrimitive(flags)){
-            if(Flags.isObject(flags)){
-                writeBoxedPrimitive(parcel, value, flags);
-            }else{
-                writePrimitive(parcel, value, flags);
-            }
-        }else {
+        if(Flags.isObject(flags)){
             writeObject(parcel, value, flags);
+        }else {
+            writePrimitive(parcel, value, flags);
         }
     }
 
@@ -56,18 +49,22 @@ public class Parcelator {
 
     private static void writeObject(Parcel parcel, Object value, int flags){
         if(!Flags.isNull(flags)){
-            switch (flags & Flags.MASK_METHOD_NON_PRIMITIVE){
-                case Flags.METHOD_STRING:
-                    writeString(parcel, (String) value, flags);
-                    break;
-                case Flags.METHOD_PRIMITIVE_ARRAY:
-                    writePrimitiveArray(parcel, value, flags);
-                    break;
-                case Flags.METHOD_OBJECT_ARRAY:
-                    writeObjectArray(parcel, value, flags);
-                    break;
-                default:
-                    throw new IllegalArgumentException();
+            if(Flags.isPrimitive(flags)){
+                writeBoxedPrimitive(parcel, value, flags);
+            }else {
+                switch (flags & Flags.MASK_METHOD_NON_PRIMITIVE) {
+                    case Flags.METHOD_STRING:
+                        writeString(parcel, (String) value, flags);
+                        break;
+                    case Flags.METHOD_PRIMITIVE_ARRAY:
+                        writePrimitiveArray(parcel, value, flags);
+                        break;
+                    case Flags.METHOD_OBJECT_ARRAY:
+                        writeObjectArray(parcel, value, flags);
+                        break;
+                    default:
+                        throw new IllegalArgumentException();
+                }
             }
         }
     }
@@ -164,5 +161,22 @@ public class Parcelator {
         for(short s : value){
             parcel.writeInt(s);
         }
+    }
+
+    public static <T> T readFromParcel(Parcel parcel, Class<T> cls){
+        int flags = Flags.makeFlags(cls, null);
+        if(Flags.isObject(flags)){
+            return readObject(parcel, cls, flags);
+        }else{
+            return readPrimitive(parcel, cls, flags);
+        }
+    }
+
+    private static <T> T readObject(Parcel parcel, Class<?> cls, int flags){
+
+    }
+
+    private static <T> T readPrimitive(Parcel parcel, Class<?> cls, int flags){
+
     }
 }
