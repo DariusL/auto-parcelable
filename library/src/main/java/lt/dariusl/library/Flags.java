@@ -22,117 +22,122 @@ public class Flags {
     public static final int OBJECT_DYNAMIC = 1 << 29;
 
     //primitives
-    public static final int TYPE_INT = 1 << 0;
-    public static final int TYPE_LONG = 1 << 1;
-    public static final int TYPE_BOOLEAN = 1 << 2;
-    public static final int TYPE_BYTE = 1 << 3;
-    public static final int TYPE_CHAR = 1 << 4;
-    public static final int TYPE_SHORT = 1 << 5;
-    public static final int TYPE_FLOAT = 1 << 6;
-    public static final int TYPE_DOUBLE = 1 << 7;
+    public static final int METHOD_INT = 1 << 0;
+    public static final int METHOD_LONG = 1 << 1;
+    public static final int METHOD_BOOLEAN = 1 << 2;
+    public static final int METHOD_BYTE = 1 << 3;
+    public static final int METHOD_CHAR = 1 << 4;
+    public static final int METHOD_SHORT = 1 << 5;
+    public static final int METHOD_FLOAT = 1 << 6;
+    public static final int METHOD_DOUBLE = 1 << 7;
 
     //Parcel implementation
-    public static final int TYPE_STRING = 1 << 8;
-    public static final int TYPE_CHAR_SEQUENCE = 1 << 9;
-    public static final int TYPE_IINTERFACE = 1 << 10;
-    public static final int TYPE_IBINDER = 1 << 11;
+    public static final int METHOD_STRING = 1 << 8;
+    public static final int METHOD_CHAR_SEQUENCE = 1 << 9;
+    public static final int METHOD_IINTERFACE = 1 << 10;
+    public static final int METHOD_IBINDER = 1 << 11;
 
     //for future use
-    public static final int TYPE_PRIMITIVE_ARRAY = 1 << 12;
-    public static final int TYPE_OBJECT_ARRAY = 1 << 13;
+    public static final int METHOD_PRIMITIVE_ARRAY = 1 << 12;
+    public static final int METHOD_OBJECT_ARRAY = 1 << 13;
 
-    public static final int TYPE_LIST = 1 << 14;
-    public static final int TYPE_MAP = 1 << 15;
-    public static final int TYPE_SET = 1 << 16;
+    public static final int METHOD_LIST = 1 << 14;
+    public static final int METHOD_MAP = 1 << 15;
+    public static final int METHOD_SET = 1 << 16;
 
-    public static final int TYPE_SPARSE_ARRAY = 1 << 17;
-    public static final int TYPE_PARCELABLE = 1 << 18;
-    public static final int TYPE_REFLECTION = 1 << 19;
+    public static final int METHOD_SPARSE_ARRAY = 1 << 17;
+    public static final int METHOD_PARCELABLE = 1 << 18;
+    public static final int METHOD_REFLECTION = 1 << 19;
 
-    public static final int MASK_OBJECT = OBJECT_STATIC | OBJECT_DYNAMIC | OBJECT_NULL;
-    public static final int MASK_PRIMITIVE = TYPE_INT | TYPE_LONG | TYPE_BOOLEAN | TYPE_BYTE | TYPE_CHAR | TYPE_SHORT | TYPE_FLOAT | TYPE_DOUBLE;
+    public static final int MASK_IS_OBJECT = OBJECT_STATIC | OBJECT_DYNAMIC | OBJECT_NULL;
+    public static final int MASK_METHOD_PRIMITIVE = METHOD_INT | METHOD_LONG | METHOD_BOOLEAN | METHOD_BYTE | METHOD_CHAR | METHOD_SHORT | METHOD_FLOAT | METHOD_DOUBLE;
+    public static final int MASK_METHOD_NON_PRIMITIVE = ~(MASK_IS_OBJECT | MASK_METHOD_PRIMITIVE);
 
-    public static boolean isObject(int flag){
-        return (flag & MASK_OBJECT) != 0;
+    public static boolean isObject(int flags){
+        return (flags & MASK_IS_OBJECT) != 0;
     }
 
-    public static boolean isPrimitive(int flag){
-        return (flag & MASK_PRIMITIVE) != 0;
+    public static boolean isPrimitive(int flags){
+        return (flags & MASK_METHOD_PRIMITIVE) != 0;
     }
 
-    public static int makeFlags(Object object, Field field){
-        try {
-            field.setAccessible(true);
-            int flags = 0;
-            Class<?> type = field.getType();
+    public static boolean isNull(int flags){
+        return (flags & OBJECT_NULL) != 0;
+    }
 
-            if (type.isPrimitive()) {
-                flags |= getTypeFlag(type);
+    public static boolean isPrimitiveArray(int flags){
+        return (flags & METHOD_PRIMITIVE_ARRAY) != 0;
+    }
+
+    public static boolean isObjectArray(int flags){
+        return (flags & METHOD_OBJECT_ARRAY) != 0;
+    }
+
+    public static int makeFlags(Class<?> type, Object object){
+        int flags = 0;
+
+        if (type.isPrimitive()) {
+            flags |= getTypeFlag(type);
+        }else{
+            if(object == null){
+                flags |= OBJECT_NULL;
             }else{
-                Object value = field.get(object);
-                if(value == null){
-                    flags |= OBJECT_NULL;
-                }else{
-                    flags |= value.getClass().equals(type) ? OBJECT_STATIC : OBJECT_DYNAMIC;
-                }
+                flags |= object.getClass().equals(type) ? OBJECT_STATIC : OBJECT_DYNAMIC;
+            }
 
-                if(type.isArray()){
-                    Class<?> component = type.getComponentType();
-                    flags |= component.isPrimitive() ? TYPE_PRIMITIVE_ARRAY : TYPE_OBJECT_ARRAY;
-                }else {
-                    if((flags & OBJECT_DYNAMIC) != 0){
-                        flags |= getTypeFlag(value.getClass());
-                    }else{
-                        flags |= getTypeFlag(type);
-                    }
+            if(type.isArray()){
+                Class<?> component = type.getComponentType();
+                flags |= component.isPrimitive() ? METHOD_PRIMITIVE_ARRAY : METHOD_OBJECT_ARRAY;
+            }else {
+                if((flags & OBJECT_DYNAMIC) != 0){
+                    flags |= getTypeFlag(object.getClass());
+                }else{
+                    flags |= getTypeFlag(type);
                 }
             }
-            return flags;
-        }catch (SecurityException | IllegalAccessException e){
-            e.printStackTrace();
-            throw new RuntimeException("Unable to read field " + field.getName(), e);
         }
+        return flags;
     }
 
     public static int getTypeFlag(Class<?> type){
-        int flag = 0;
+        int flag;
 
         if(isInteger(type)){
-            flag = TYPE_INT;
+            flag = METHOD_INT;
         }else if(isLong(type)){
-            flag = TYPE_LONG;
+            flag = METHOD_LONG;
         }else if(isBoolean(type)){
-            flag = TYPE_BOOLEAN;
+            flag = METHOD_BOOLEAN;
         }else if(isByte(type)){
-            flag = TYPE_BYTE;
+            flag = METHOD_BYTE;
         }else if(isChar(type)){
-            flag = TYPE_CHAR;
+            flag = METHOD_CHAR;
         }else if(isShort(type)){
-            flag = TYPE_SHORT;
+            flag = METHOD_SHORT;
         }else if(isFloat(type)){
-            flag = TYPE_FLOAT;
+            flag = METHOD_FLOAT;
         }else if(isDouble(type)){
-            flag = TYPE_DOUBLE;
+            flag = METHOD_DOUBLE;
         }else if(isString(type)){
-            flag = TYPE_STRING;
+            flag = METHOD_STRING;
         }else if (isCharSequence(type)) {
-            flag = TYPE_CHAR_SEQUENCE;
+            flag = METHOD_CHAR_SEQUENCE;
         }else if(isSparseArray(type)){
-            flag = TYPE_SPARSE_ARRAY;
+            flag = METHOD_SPARSE_ARRAY;
         }else if(isList(type)){
-            flag = TYPE_LIST;
+            flag = METHOD_LIST;
         }else if(isMap(type)){
-            flag = TYPE_MAP;
+            flag = METHOD_MAP;
         }else if(isSet(type)){
-            flag = TYPE_SET;
+            flag = METHOD_SET;
         }else if(isIBinder(type)){
-            flag = TYPE_IBINDER;
+            flag = METHOD_IBINDER;
         }else if(isIInterface(type)){
-            flag = TYPE_IINTERFACE;
+            flag = METHOD_IINTERFACE;
         }else if(isParcelable(type)){
-            flag = TYPE_PARCELABLE;
+            flag = METHOD_PARCELABLE;
         }else{
-            flag = TYPE_REFLECTION;
+            flag = METHOD_REFLECTION;
         }
         return flag;
     }
