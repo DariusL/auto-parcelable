@@ -65,6 +65,10 @@ public class Flags {
         return (flags & OBJECT_NULL) != 0;
     }
 
+    public static boolean isDynamic(int flags){
+        return (flags & OBJECT_DYNAMIC) != 0;
+    }
+
     public static boolean isPrimitiveArray(int flags){
         return (flags & METHOD_PRIMITIVE_ARRAY) != 0;
     }
