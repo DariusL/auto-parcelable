@@ -2,6 +2,7 @@ package lt.dariusl.library;
 
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.widget.FrameLayout;
 
 import java.lang.reflect.Array;
 import java.util.Objects;
@@ -17,7 +18,23 @@ public class Parcelator {
         if(!Flags.isObject(flags)){
             writePrimitive(parcel, value, flags);
         }else {
-            writeObject(parcel, value, flags);
+            writeObject(parcel, value, cls, flags);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T readFromParcel(Parcel parcel, Class<T> cls){
+        if(cls.isPrimitive()){
+            return (T) readPrimitive(parcel, cls);
+        }else{
+            return (T) readObject(parcel, cls);
+        }
+    }
+
+    private static void writeBoxedPrimitive(Parcel parcel, Object value, int flags){
+        parcel.writeInt(flags);
+        if(!Flags.isNull(flags)){
+            writePrimitive(parcel, value, flags);
         }
     }
 
@@ -52,7 +69,35 @@ public class Parcelator {
         }
     }
 
-    private static void writeObject(Parcel parcel, Object value, int flags){
+    private static Object readPrimitive(Parcel parcel, int flags){
+        switch (flags & Flags.MASK_METHOD_PRIMITIVE) {
+            case Flags.METHOD_INT:
+                return parcel.readInt();
+            case Flags.METHOD_LONG:
+                return parcel.readLong();
+            case Flags.METHOD_BOOLEAN:
+                return parcel.readInt() == 1;
+            case Flags.METHOD_BYTE:
+                return parcel.readByte();
+            case Flags.METHOD_CHAR:
+                return (char) parcel.readInt();
+            case Flags.METHOD_SHORT:
+                return (short) parcel.readInt();
+            case Flags.METHOD_FLOAT:
+                return parcel.readFloat();
+            case Flags.METHOD_DOUBLE:
+                return parcel.readDouble();
+            default:
+                throw new IllegalArgumentException("writePrimitive flags argument was not a primitive flag");
+        }
+    }
+
+    private static Object readPrimitive(Parcel parcel, Class<?> cls){
+        int flags = Flags.makeFlags(cls, null);
+        return readPrimitive(parcel, flags);
+    }
+
+    private static void writeObject(Parcel parcel, Object value, Class<?> cls, int flags){
         if(Flags.isPrimitive(flags)){
             writeBoxedPrimitive(parcel, value, flags);
         }else {
@@ -64,7 +109,7 @@ public class Parcelator {
                     writePrimitiveArray(parcel, value, flags);
                     break;
                 case Flags.METHOD_OBJECT_ARRAY:
-                    writeObjectArray(parcel, value, flags);
+                    writeObjectArray(parcel, value, cls, flags);
                     break;
                 case Flags.METHOD_PARCELABLE:
                     writeParcelable(parcel, (Parcelable) value, flags);
@@ -75,9 +120,33 @@ public class Parcelator {
         }
     }
 
+    private static Object readObject(Parcel parcel, Class<?> cls){
+        int flags = parcel.readInt();
+        if(!Flags.isNull(flags)) {
+            if (Flags.isPrimitive(flags)) {
+                return readPrimitive(parcel, flags);
+            } else {
+                switch (flags & Flags.MASK_METHOD_NON_PRIMITIVE) {
+                    case Flags.METHOD_STRING:
+                        return readString(parcel, flags);
+                    case Flags.METHOD_PRIMITIVE_ARRAY:
+                        return readPrimitiveArray(parcel, cls, flags);
+                    case Flags.METHOD_OBJECT_ARRAY:
+                        return readObjectArray(parcel, cls, flags);
+                    case Flags.METHOD_PARCELABLE:
+                        return readParcelable(parcel, cls, flags);
+                    default:
+                        throw new IllegalArgumentException();
+                }
+            }
+        }else{
+            return null;
+        }
+    }
+
     private static void writeParcelable(Parcel parcel, Parcelable value, int flags){
         writeObjectData(parcel, value, flags);
-        if(!Flags.isNull(flags)){
+        if(value != null){
             parcel.writeParcelable(value, 0);
         }
     }
@@ -94,16 +163,15 @@ public class Parcelator {
         return parcel.readParcelable(cls.getClassLoader());
     }
 
-    private static void writeBoxedPrimitive(Parcel parcel, Object value, int flags){
-        writeObjectData(parcel, value, flags);
-        if(!Flags.isNull(flags)){
-            writePrimitive(parcel, value, flags);
+    private static void writeString(Parcel parcel, String value, int flags){
+        parcel.writeInt(flags);
+        if(value != null) {
+            parcel.writeString(value);
         }
     }
 
-    private static void writeString(Parcel parcel, String value, int flags){
-        writeObjectData(parcel, value, flags);
-        parcel.writeString(value);
+    private static String readString(Parcel parcel, int flags){
+        return parcel.readString();
     }
 
     //Types cannot be parceled statically, because that would defeat the purpose
@@ -168,17 +236,68 @@ public class Parcelator {
         }
     }
 
-    private static void writeObjectArray(Parcel parcel, Object value, int flags){
+    private static Object readPrimitiveArray(Parcel parcel, Class<?> cls, int flags){
+        Class<?> component;
+        if(Flags.isDynamic(flags)){
+            component = Primitives.getPrimitiveType(parcel.readString());
+        }else{
+            component = cls.getComponentType();
+        }
+        int itemFlags = Flags.makeFlags(component, null);
+
+        switch (itemFlags & Flags.MASK_METHOD_PRIMITIVE) {
+            case Flags.METHOD_INT:
+                return parcel.createIntArray();
+            case Flags.METHOD_LONG:
+                return parcel.createLongArray();
+            case Flags.METHOD_BOOLEAN:
+                return parcel.createBooleanArray();
+            case Flags.METHOD_BYTE:
+                return parcel.createByteArray();
+            case Flags.METHOD_CHAR:
+                return parcel.createCharArray();
+            case Flags.METHOD_SHORT:
+                return createShortArray(parcel);
+            case Flags.METHOD_FLOAT:
+                return parcel.createFloatArray();
+            case Flags.METHOD_DOUBLE:
+                return parcel.createDoubleArray();
+            default:
+                throw new IllegalArgumentException("writePrimitive flags argument was not a primitive flag");
+        }
+    }
+
+    private static void writeObjectArray(Parcel parcel, Object value, Class<?> cls, int flags){
         writeArrayData(parcel, value, flags);
-        if((flags & Flags.OBJECT_NULL) == 0){
+        if(value != null){
             Class<?> component = value.getClass().getComponentType();
             Object[] array = (Object[]) value;
             parcel.writeInt(array.length);
             for(Object obj : array){
                 int objFlags = Flags.makeFlags(component, obj);
-                writeObject(parcel, obj, objFlags);
+                writeObject(parcel, obj, component, objFlags);
             }
         }
+    }
+
+    private static Object readObjectArray(Parcel parcel, Class<?> cls, int flags){
+        Class<?> component;
+        if(Flags.isDynamic(flags)){
+            try {
+                component = Class.forName(parcel.readString());
+            }catch (ClassNotFoundException e){
+                throw new RuntimeException("Unable to create array component class", e);
+            }
+        }else{
+            component = cls.getComponentType();
+        }
+
+        int n = parcel.readInt();
+        Object[] ret = (Object[]) Array.newInstance(component, n);
+        for(int i = 0; i < n; i++){
+            ret[i] = readObject(parcel, component);
+        }
+        return ret;
     }
 
     private static void writeShortArray(Parcel parcel, short[] value){
@@ -196,134 +315,5 @@ public class Parcelator {
             ret[i] = (short) parcel.readInt();
         }
         return ret;
-    }
-
-    @SuppressWarnings("unchecked")
-    public static <T> T readFromParcel(Parcel parcel, Class<T> cls){
-        if(cls.isPrimitive()){
-            return (T) readPrimitive(parcel, cls);
-        }else{
-            return (T) readObject(parcel, cls);
-        }
-    }
-
-    private static Object readObject(Parcel parcel, Class<?> cls){
-        int flags = parcel.readInt();
-        if(!Flags.isNull(flags)){
-            if(Flags.isPrimitive(flags)){
-                return readPrimitive(parcel, flags);
-            }else{
-                switch (flags & Flags.MASK_METHOD_NON_PRIMITIVE) {
-                    case Flags.METHOD_STRING:
-                        return readString(parcel, flags);
-                    case Flags.METHOD_PRIMITIVE_ARRAY:
-                        return readPrimitiveArray(parcel, cls, flags);
-                    case Flags.METHOD_OBJECT_ARRAY:
-                        return readObjectArray(parcel, cls, flags);
-                    case Flags.METHOD_PARCELABLE:
-                        return readParcelable(parcel, cls, flags);
-                    default:
-                        throw new IllegalArgumentException();
-                }
-            }
-        }else{
-            return null;
-        }
-    }
-
-    private static String readString(Parcel parcel, int flags){
-        //consume typename
-        if(Flags.isDynamic(flags)) {
-            parcel.readString();
-        }
-        return parcel.readString();
-    }
-
-
-    private static Object readPrimitiveArray(Parcel parcel, Class<?> cls, int flags){
-        if(!Flags.isNull(flags)){
-            Class<?> component;
-            if(Flags.isDynamic(flags)){
-                component = Primitives.getPrimitiveType(parcel.readString());
-            }else{
-                component = cls.getComponentType();
-            }
-            int itemFlags = Flags.makeFlags(component, null);
-
-            switch (itemFlags & Flags.MASK_METHOD_PRIMITIVE) {
-                case Flags.METHOD_INT:
-                    return parcel.createIntArray();
-                case Flags.METHOD_LONG:
-                    return parcel.createLongArray();
-                case Flags.METHOD_BOOLEAN:
-                    return parcel.createBooleanArray();
-                case Flags.METHOD_BYTE:
-                    return parcel.createByteArray();
-                case Flags.METHOD_CHAR:
-                    return parcel.createCharArray();
-                case Flags.METHOD_SHORT:
-                    return createShortArray(parcel);
-                case Flags.METHOD_FLOAT:
-                    return parcel.createFloatArray();
-                case Flags.METHOD_DOUBLE:
-                    return parcel.createDoubleArray();
-                default:
-                    throw new IllegalArgumentException("writePrimitive flags argument was not a primitive flag");
-            }
-        }else{
-            return null;
-        }
-    }
-
-    private static Object readObjectArray(Parcel parcel, Class<?> cls, int flags){
-        if(!Flags.isNull(flags)){
-            Class<?> component;
-            if(Flags.isDynamic(flags)){
-                try {
-                    component = Class.forName(parcel.readString());
-                }catch (ClassNotFoundException e){
-                    throw new RuntimeException("Unable to create array component class", e);
-                }
-            }else{
-                component = cls.getComponentType();
-            }
-
-            int n = parcel.readInt();
-            Object[] ret = (Object[]) Array.newInstance(component, n);
-            for(int i = 0; i < n; i++){
-                ret[i] = readObject(parcel, component);
-            }
-            return ret;
-        }else{
-            return null;
-        }
-    }
-
-    private static Object readPrimitive(Parcel parcel, Class<?> cls){
-        int flags = Flags.makeFlags(cls, null);
-        return readPrimitive(parcel, flags);
-    }
-
-    private static Object readPrimitive(Parcel parcel, int flags){
-        switch (flags & Flags.MASK_METHOD_PRIMITIVE){
-            case Flags.METHOD_INT:
-                return parcel.readInt();
-            case Flags.METHOD_LONG:
-                return parcel.readLong();
-            case Flags.METHOD_BOOLEAN:
-                return parcel.readInt() == 1;
-            case Flags.METHOD_BYTE:
-                return parcel.readByte();
-            case Flags.METHOD_CHAR:
-                return (char) parcel.readInt();
-            case Flags.METHOD_SHORT:
-                return (short)parcel.readInt();
-            case Flags.METHOD_FLOAT:
-                return parcel.readFloat();
-            case Flags.METHOD_DOUBLE:
-                return parcel.readDouble();
-            default:
-                throw new IllegalArgumentException("writePrimitive flags argument was not a primitive flag");
-        }
     }
 }

@@ -8,7 +8,7 @@ import android.test.InstrumentationTestCase;
 public class PrimitiveTests extends InstrumentationTestCase {
 
     public void testInteger(){
-        TestUtils.writeReadAssert(5, int.class);
+        TestUtils.writeReadAssert(506158, int.class);
     }
 
     public void testDouble(){
@@ -16,11 +16,11 @@ public class PrimitiveTests extends InstrumentationTestCase {
     }
 
     public void testBoxedInteger(){
-        TestUtils.writeReadAssert(20, Integer.class);
+        TestUtils.writeReadAssert(60, Integer.class);
     }
 
     public void testDynamicInteger(){
-        TestUtils.writeReadAssert(60, Object.class);
+        TestUtils.writeReadAssert(81, Object.class);
     }
 
     public void testNullInteger(){
