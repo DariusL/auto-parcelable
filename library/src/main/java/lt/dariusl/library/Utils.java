@@ -1,5 +1,7 @@
 package lt.dariusl.library;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -32,6 +34,34 @@ public class Utils {
         }
         for (Class<?> i : interfaces){
             getInheritance(i, set);
+        }
+    }
+
+    public static <T> boolean equals(T left, T right, Class<?> cls){
+        if(Modifier.isFinal(cls.getModifiers())){
+            return left.equals(right);
+        }
+
+        try {
+            for (Field field : cls.getDeclaredFields()) {
+                if(!Modifier.isStatic(field.getModifiers())) {
+                    field.setAccessible(true);
+                    Object l = field.get(left);
+                    Object r = field.get(right);
+                    if(l != null && r != null){
+                        if(!equals(l, r, l.getClass())){
+                            return false;
+                        }
+                    }else{
+                        if(!(l == null && r == null)){
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }catch (IllegalAccessException e){
+            throw new RuntimeException(e);
         }
     }
 }
