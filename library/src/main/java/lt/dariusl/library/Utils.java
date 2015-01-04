@@ -2,6 +2,8 @@ package lt.dariusl.library;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,6 +36,20 @@ public class Utils {
         }
         for (Class<?> i : interfaces){
             getInheritance(i, set);
+        }
+    }
+
+    public static List<Field> getAllFields(Class<?> cls){
+        List<Field> fields = new ArrayList<>();
+        getAllFields(cls, fields);
+        return fields;
+    }
+
+    private static void getAllFields(Class<?> cls, List<Field> fields){
+        Collections.addAll(fields, cls.getDeclaredFields());
+        Class<?> superclass = cls.getSuperclass();
+        if(superclass != null){
+            getAllFields(superclass, fields);
         }
     }
 

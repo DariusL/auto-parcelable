@@ -5,6 +5,14 @@ import android.os.Parcelable;
 import android.widget.FrameLayout;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -114,6 +122,9 @@ public class Parcelator {
                 case Flags.METHOD_PARCELABLE:
                     writeParcelable(parcel, (Parcelable) value, flags);
                     break;
+                case Flags.METHOD_REFLECTION:
+                    writeObjectReflective(parcel, value, cls, flags);
+                    break;
                 default:
                     throw new IllegalArgumentException();
             }
@@ -135,6 +146,8 @@ public class Parcelator {
                         return readObjectArray(parcel, cls, flags);
                     case Flags.METHOD_PARCELABLE:
                         return readParcelable(parcel, cls, flags);
+                    case Flags.METHOD_REFLECTION:
+                        return readObjectReflective(parcel, cls, flags);
                     default:
                         throw new IllegalArgumentException();
                 }
@@ -270,7 +283,7 @@ public class Parcelator {
     private static void writeObjectArray(Parcel parcel, Object value, Class<?> cls, int flags){
         writeArrayData(parcel, value, flags);
         if(value != null){
-            Class<?> component = value.getClass().getComponentType();
+            Class<?> component = cls.getComponentType();
             Object[] array = (Object[]) value;
             parcel.writeInt(array.length);
             for(Object obj : array){
@@ -315,5 +328,99 @@ public class Parcelator {
             ret[i] = (short) parcel.readInt();
         }
         return ret;
+    }
+
+    private static void writeObjectReflective(Parcel parcel, Object value, Class<?> cls, int flags){
+        writeObjectData(parcel, value, flags);
+        try {
+            if (value != null) {
+                List<Field> fields = Utils.getAllFields(value.getClass());
+                Collections.sort(fields, FIELD_NAME_COMPARATOR);
+
+                for (Field field : fields) {
+                    if(field.isSynthetic() || Modifier.isStatic(field.getModifiers())){
+                        continue;
+                    }
+
+                    field.setAccessible(true);
+                    Object fieldValue = field.get(value);
+                    writeToParcel(parcel, fieldValue, (Class<Object>) field.getType());
+                }
+            }
+        }catch (IllegalAccessException e){
+            noFieldAccess(e);
+        }
+    }
+
+    private static Object readObjectReflective(Parcel parcel, Class<?> cls, int flags){
+        if (!Flags.isNull(flags)) {
+            Object instance = null;
+            try {
+                if (Flags.isDynamic(flags)) {
+                    cls = Class.forName(parcel.readString());
+                }
+
+                Class<?> enclosing = cls.getEnclosingClass();
+                if(enclosing != null && !Modifier.isStatic(cls.getModifiers())){
+                    Constructor<?> ctor = cls.getDeclaredConstructor(enclosing);
+                    ctor.setAccessible(true);
+                    instance = ctor.newInstance((Object) null);
+                }else{
+                    Constructor<?> ctor = cls.getDeclaredConstructor();
+                    ctor.setAccessible(true);
+                    instance = ctor.newInstance();
+                }
+
+            }catch (ClassNotFoundException e){
+                classNotFound(e);
+            } catch (NoSuchMethodException e) {
+                noConstructor(e);
+            } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
+                ctorFailed(e);
+            }
+
+            List<Field> fields = Utils.getAllFields(cls);
+            Collections.sort(fields, FIELD_NAME_COMPARATOR);
+            try {
+                for (Field field : fields) {
+                    if (field.isSynthetic() || Modifier.isStatic(field.getModifiers())) {
+                        continue;
+                    }
+
+                    field.setAccessible(true);
+
+                    field.set(instance, readFromParcel(parcel, field.getType()));
+                }
+            }catch (IllegalAccessException e){
+                noFieldAccess(e);
+            }
+
+            return instance;
+        }else{
+            return null;
+        }
+    }
+
+    private static final Comparator<Field> FIELD_NAME_COMPARATOR = new Comparator<Field>() {
+        @Override
+        public int compare(Field lhs, Field rhs) {
+            return lhs.getName().compareTo(rhs.getName());
+        }
+    };
+
+    private static void classNotFound(ClassNotFoundException e){
+        throw new RuntimeException("Unable to create class from parceled name", e);
+    }
+
+    private static void noConstructor(NoSuchMethodException e){
+        throw new RuntimeException("No valid constructor found", e);
+    }
+
+    private static void ctorFailed(Exception e){
+        throw new RuntimeException("Failure instantiating class", e);
+    }
+
+    private static void noFieldAccess(IllegalAccessException e){
+        throw new RuntimeException("Unable to access class field", e);
     }
 }
