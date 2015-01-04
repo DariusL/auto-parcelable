@@ -20,16 +20,28 @@ import java.util.Objects;
  */
 public class Parcelator {
 
+    /**
+     * Writes the object to a parcel when it's type is known as cls
+     * @param parcel the parcel
+     * @param value the object to be written
+     * @param cls the assumed type of the object
+     */
     public static <T> void writeToParcel(Parcel parcel, T value, Class<T> cls){
         int flags = Flags.makeFlags(cls, value);
 
-        if(!Flags.isObject(flags)){
+        if(cls.isPrimitive()){
             writePrimitive(parcel, value, flags);
         }else {
             writeObject(parcel, value, cls, flags);
         }
     }
 
+    /**
+     * Reads an object from a parcel
+     * @param parcel the parcel
+     * @param cls the assumed type of the object, <b>must</b> match the type passed to {@link #writeToParcel(android.os.Parcel, Object, Class)}
+     * @return the unparceled object
+     */
     @SuppressWarnings("unchecked")
     public static <T> T readFromParcel(Parcel parcel, Class<T> cls){
         if(cls.isPrimitive()){
@@ -39,6 +51,9 @@ public class Parcelator {
         }
     }
 
+    /**
+     * Writes the object as a boxed primitive including object flags
+     */
     private static void writeBoxedPrimitive(Parcel parcel, Object value, int flags){
         parcel.writeInt(flags);
         if(!Flags.isNull(flags)){
@@ -46,6 +61,9 @@ public class Parcelator {
         }
     }
 
+    /**
+     * Writes the object as a primitive without writing the flags
+     */
     private static void writePrimitive(Parcel parcel, Object value, int flags){
         switch (flags & Flags.MASK_METHOD_PRIMITIVE){
             case Flags.METHOD_INT:
@@ -77,6 +95,10 @@ public class Parcelator {
         }
     }
 
+    /**
+     * Reads a primitive from a parcel with the passed flags
+     * @return a boxed primitive
+     */
     private static Object readPrimitive(Parcel parcel, int flags){
         switch (flags & Flags.MASK_METHOD_PRIMITIVE) {
             case Flags.METHOD_INT:
@@ -100,6 +122,10 @@ public class Parcelator {
         }
     }
 
+    /**
+     * Reads a primitive from a parcel with the passed type
+     * @return a boxed primitive
+     */
     private static Object readPrimitive(Parcel parcel, Class<?> cls){
         int flags = Flags.makeFlags(cls, null);
         return readPrimitive(parcel, flags);
