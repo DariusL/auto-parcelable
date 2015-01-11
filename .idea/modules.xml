@@ -3,7 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/AutoParcelable.iml" filepath="$PROJECT_DIR$/AutoParcelable.iml" />
-      <module fileurl="file://$PROJECT_DIR$/library/library.iml" filepath="$PROJECT_DIR$/library/library.iml" />
+      <module fileurl="file://$PROJECT_DIR$/autoparcelable/autoparcelable.iml" filepath="$PROJECT_DIR$/autoparcelable/autoparcelable.iml" />
+      <module fileurl="file://$PROJECT_DIR$/autoparcelabletests/autoparcelabletests.iml" filepath="$PROJECT_DIR$/autoparcelabletests/autoparcelabletests.iml" />
     </modules>
   </component>
 </project>
