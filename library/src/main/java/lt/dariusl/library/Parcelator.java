@@ -18,7 +18,7 @@ import java.util.Objects;
 /**
  * Created by Darius on 2014.12.29.
  */
-public class Parcelator {
+public final class Parcelator {
 
     /**
      * Writes the object to a parcel when it's type is known as cls
@@ -36,6 +36,11 @@ public class Parcelator {
         }
     }
 
+    public static <T> void writeReflective(Parcel parcel, T value, Class<T> cls){
+        int flags = Flags.makeFlags(cls, value);
+        writeObjectReflective(parcel, value, cls, flags);
+    }
+
     /**
      * Reads an object from a parcel
      * @param parcel the parcel
@@ -49,6 +54,11 @@ public class Parcelator {
         }else{
             return (T) readObject(parcel, cls);
         }
+    }
+
+    public static <T> T readReflective(Parcel parcel, Class<T> cls){
+        int flags = parcel.readInt();
+        return (T)readObjectReflective(parcel, cls, flags);
     }
 
     /**

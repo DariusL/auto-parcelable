@@ -6,7 +6,7 @@ import java.util.Map;
 /**
  * Created by Darius on 2014.12.30.
  */
-public class Primitives {
+public final class Primitives {
     private static final Map<String, Class<?>> types;
 
     public static final String INT = int.class.getName();

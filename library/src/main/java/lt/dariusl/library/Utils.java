@@ -11,7 +11,7 @@ import java.util.Set;
 /**
  * Created by Darius on 2014.12.29.
  */
-public class Utils {
+public final class Utils {
 
     public static void classNames(Class<?> ...classes){
         String[] names = new String[classes.length];

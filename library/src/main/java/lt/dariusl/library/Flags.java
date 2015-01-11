@@ -15,7 +15,7 @@ import java.util.concurrent.CountDownLatch;
 /**
  * Created by Darius on 2014.12.28.
  */
-public class Flags {
+public final class Flags {
     //object flags
     public static final int OBJECT_NULL = 1 << 31;
     public static final int OBJECT_STATIC = 1 << 30;
