@@ -6,6 +6,7 @@ import junit.framework.Assert;
 
 import java.util.Arrays;
 
+import lt.dariusl.library.ParcelableWrapper;
 import lt.dariusl.library.Parcelator;
 
 /**
@@ -17,6 +18,14 @@ public class TestUtils {
         Parcelator.writeToParcel(parcel, in, cls);
         parcel.setDataPosition(0);
         T out = Parcelator.readFromParcel(parcel, cls);
+        Assert.assertEquals(in, out);
+    }
+
+    public static  <T> void writeReadAssertWrapper(T in){
+        Parcel parcel = Parcel.obtain();
+        parcel.writeParcelable(new ParcelableWrapper<T>(in), 0);
+        parcel.setDataPosition(0);
+        T out = ((ParcelableWrapper<T> )parcel.readParcelable(ParcelableWrapper.class.getClassLoader())).get();
         Assert.assertEquals(in, out);
     }
 
