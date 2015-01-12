@@ -1,13 +1,24 @@
 package lt.dariusl.autoparcelabletests;
 
+import android.os.Bundle;
+import android.os.Parcel;
 import android.os.Parcelable;
 import android.test.InstrumentationTestCase;
 
+import junit.framework.Assert;
+
+import lt.dariusl.autoparcelable.AutoParcelable;
+import lt.dariusl.autoparcelable.Creators;
 import lt.dariusl.autoparcelable.ParcelableWrapper;
+import lt.dariusl.autoparcelable.Parcelator;
+import lt.dariusl.autoparcelabletests.data.IgnoredField;
+import lt.dariusl.autoparcelabletests.data.Outer;
+import lt.dariusl.autoparcelabletests.data.ParcelableField;
 import lt.dariusl.autoparcelabletests.data.ReflectedField;
 import lt.dariusl.autoparcelabletests.data.StringLong;
 import lt.dariusl.autoparcelabletests.data.StringLongAuto;
 import lt.dariusl.autoparcelabletests.data.StringLongParcelable;
+import lt.dariusl.autoparcelabletests.data.UnParcelable;
 
 /**
  * Created by Darius on 2015.01.01.
@@ -88,8 +99,33 @@ public class Tests extends InstrumentationTestCase{
         TestUtils.writeReadAssert(value, ReflectedField.class);
     }
 
+    public void testParcelableField(){
+        ParcelableField value = new ParcelableField(new StringLongParcelable("sagtrbgs", 16135164L), 8);
+        TestUtils.writeReadAssert(value, ParcelableField.class);
+    }
+
     public void testStringLongWrapper(){
         StringLong value = new StringLong("fasgasg", 816148L);
         TestUtils.writeReadAssert(new ParcelableWrapper<>(value), ParcelableWrapper.class);
+    }
+
+    public void testNestedClasses(){
+        Outer value = new Outer("gagiorthnes", 496415618L);
+        TestUtils.writeReadAssert(value, Outer.class);
+    }
+
+    public void testIgnore() {
+        IgnoredField value = new IgnoredField("gagiorthnes", "grthrsrw");
+        TestUtils.writeReadAssert(value, IgnoredField.class);
+    }
+
+    public void testUnparcelable(){
+        try {
+            UnParcelable value = new UnParcelable(94894L);
+            TestUtils.writeReadAssert(value, UnParcelable.class);
+            Assert.fail();
+        }catch (RuntimeException e){
+            Assert.assertTrue(e.getCause() instanceof NoSuchMethodException);
+        }
     }
 }

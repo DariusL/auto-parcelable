@@ -1,5 +1,7 @@
 package lt.dariusl.autoparcelabletests.data;
 
+import android.os.Bundle;
+
 /**
  * Created by Darius on 2015.01.03.
  */

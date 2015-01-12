@@ -371,7 +371,7 @@ public final class Parcelator {
                 Collections.sort(fields, FIELD_NAME_COMPARATOR);
 
                 for (Field field : fields) {
-                    if(field.isSynthetic() || Modifier.isStatic(field.getModifiers())){
+                    if (!shouldParcel(field)) {
                         continue;
                     }
 
@@ -416,7 +416,7 @@ public final class Parcelator {
             Collections.sort(fields, FIELD_NAME_COMPARATOR);
             try {
                 for (Field field : fields) {
-                    if (field.isSynthetic() || Modifier.isStatic(field.getModifiers())) {
+                    if (!shouldParcel(field)) {
                         continue;
                     }
 
@@ -432,6 +432,10 @@ public final class Parcelator {
         }else{
             return null;
         }
+    }
+
+    private static boolean shouldParcel(Field field){
+        return !(field.isSynthetic() || Modifier.isStatic(field.getModifiers()) || field.isAnnotationPresent(Ignore.class));
     }
 
     private static final Comparator<Field> FIELD_NAME_COMPARATOR = new Comparator<Field>() {
