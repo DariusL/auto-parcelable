@@ -6,6 +6,7 @@ import android.os.IInterface;
 import android.os.Parcelable;
 import android.util.SparseArray;
 
+import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
@@ -31,13 +32,11 @@ public final class Flags {
     public static final int METHOD_FLOAT = 1 << 6;
     public static final int METHOD_DOUBLE = 1 << 7;
 
-    //Parcel implementation
     public static final int METHOD_STRING = 1 << 8;
     public static final int METHOD_CHAR_SEQUENCE = 1 << 9;
     public static final int METHOD_IINTERFACE = 1 << 10;
     public static final int METHOD_IBINDER = 1 << 11;
 
-    //for future use
     public static final int METHOD_PRIMITIVE_ARRAY = 1 << 12;
     public static final int METHOD_OBJECT_ARRAY = 1 << 13;
 
@@ -48,6 +47,8 @@ public final class Flags {
     public static final int METHOD_SPARSE_ARRAY = 1 << 17;
     public static final int METHOD_PARCELABLE = 1 << 18;
     public static final int METHOD_REFLECTION = 1 << 19;
+    public static final int METHOD_SERIALIZABLE = 1 << 20;
+    public static final int METHOD_ENUM = 1 << 21;
 
     public static final int MASK_IS_OBJECT = OBJECT_STATIC | OBJECT_DYNAMIC | OBJECT_NULL;
     public static final int MASK_METHOD_PRIMITIVE = METHOD_INT | METHOD_LONG | METHOD_BOOLEAN | METHOD_BYTE | METHOD_CHAR | METHOD_SHORT | METHOD_FLOAT | METHOD_DOUBLE;
@@ -138,8 +139,12 @@ public final class Flags {
             flag = METHOD_IBINDER;
         }else if(isIInterface(type)){
             flag = METHOD_IINTERFACE;
-        }else if(isParcelable(type)){
+        }else if(isParcelable(type)) {
             flag = METHOD_PARCELABLE;
+        }else if(isEnum(type)) {
+            flag = METHOD_ENUM;
+        }else if(isSerializable(type)){
+            flag = METHOD_SERIALIZABLE;
         }else{
             flag = METHOD_REFLECTION;
         }
@@ -212,5 +217,13 @@ public final class Flags {
 
     public static boolean isParcelable(Class<?> cls){
         return Parcelable.class.isAssignableFrom(cls);
+    }
+
+    public static boolean isSerializable(Class<?> cls){
+        return Serializable.class.isAssignableFrom(cls);
+    }
+
+    public static boolean isEnum(Class<?> cls){
+        return cls.isEnum();
     }
 }

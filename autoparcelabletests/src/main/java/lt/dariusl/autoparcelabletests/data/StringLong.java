@@ -14,15 +14,4 @@ public class StringLong {
         this.foo = foo;
         this.bar = bar;
     }
-
-    @Override
-    public boolean equals(Object o) {
-        if(!(o instanceof  StringLong)){
-            return false;
-        }
-
-        StringLong that = (StringLong) o;
-
-        return foo.equals(that.foo) && bar == that.bar;
-    }
 }
